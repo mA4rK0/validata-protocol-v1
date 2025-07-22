@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "validata_backend": {
+      "main": "src/validata_backend/main.mo",
+      "type": "motoko"
+    },
+    "validata_frontend": {
+      "dependencies": [
+        "validata_backend"
+      ],
+      "source": [
+        "src/validata_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "validata_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
