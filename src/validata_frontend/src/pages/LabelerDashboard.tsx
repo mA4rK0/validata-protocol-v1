@@ -1,94 +1,248 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Filter, Star, Award, Wallet, TrendingUp, Tag, CheckCircle2, Clock, ExternalLink, Target } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { useAuth } from "../hooks/useAuth";
+import { validata_backend } from "declarations/validata_backend";
+import { Task as BackendTask, UserProfile } from "declarations/validata_backend/validata_backend.did";
 
 export const LabelerDashboard: React.FC = () => {
+  const { authState } = useAuth();
   const [activeSection, setActiveSection] = useState<"overview" | "marketplace" | "active" | "earnings">("overview");
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [marketplaceTasks, setMarketplaceTasks] = useState<BackendTask[]>([]);
+  const [activeTasks, setActiveTasks] = useState<BackendTask[]>([]);
+  const [earnings, setEarnings] = useState<any[]>([]);
+  const [stats, setStats] = useState([
+    { label: "Total Earned", value: "0 ICP", change: "+0 this month", color: "text-[#00FFB2]" },
+    { label: "Tasks Completed", value: "0", change: "+0 this week", color: "text-[#9B5DE5]" },
+    { label: "Accuracy Rate", value: "0%", change: "+0% avg", color: "text-blue-500" },
+    { label: "Reputation Level", value: "Beginner", change: "Level 0", color: "text-orange-500" },
+  ]);
 
-  const stats = [
-    { label: "Total Earned", value: "2,847.3 ICP", change: "+234.5 this month", color: "text-[#00FFB2]" },
-    { label: "Tasks Completed", value: "1,429", change: "+23 this week", color: "text-[#9B5DE5]" },
-    { label: "Accuracy Rate", value: "97.8%", change: "+0.3% avg", color: "text-blue-500" },
-    { label: "Reputation Level", value: "Expert", change: "Level 8", color: "text-orange-500" },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!authState.isAuthenticated || !authState.user) return;
 
-  const marketplaceTasks = [
-    {
-      id: 1,
-      title: "Bitcoin Transaction Risk Analysis",
-      client: "CryptoSecure Labs",
-      type: "BTC Analysis",
-      reward: "0.15 ICP",
-      totalReward: "150.0 ICP",
-      labels: 1000,
-      difficulty: "Medium",
-      timeEstimate: "2-3 hours",
-      requiredLevel: "Advanced",
-      description: "Analyze Bitcoin transactions for risk patterns and suspicious activities.",
-      skills: ["BTC", "Risk Analysis", "Pattern Recognition"],
-      deadline: "2 days",
-    },
-    {
-      id: 2,
-      title: "Smart Contract Vulnerability Detection",
-      client: "DeFi Shield",
-      type: "Contract Risk",
-      reward: "0.25 ICP",
-      totalReward: "500.0 ICP",
-      labels: 2000,
-      difficulty: "Hard",
-      timeEstimate: "4-6 hours",
-      requiredLevel: "Expert",
-      description: "Review smart contracts for potential vulnerabilities and security issues.",
-      skills: ["Solidity", "Security", "Smart Contracts"],
-      deadline: "5 days",
-    },
-    {
-      id: 3,
-      title: "Phishing Website Classification",
-      client: "WebGuard Inc",
-      type: "Scam Detection",
-      reward: "0.08 ICP",
-      totalReward: "80.0 ICP",
-      labels: 1000,
-      difficulty: "Easy",
-      timeEstimate: "1-2 hours",
-      requiredLevel: "Beginner",
-      description: "Identify and classify phishing websites and scam attempts.",
-      skills: ["Web Security", "Phishing", "Classification"],
-      deadline: "3 days",
-    },
-  ];
+      try {
+        // Fetch user profile
+        const profile = (await validata_backend.getProfile(authState.user.principal))?.[0] ?? null;
+        if (profile) setUserProfile(profile);
 
-  const activeTasks = [
-    {
-      id: 1,
-      title: "DeFi Protocol Analysis",
-      progress: 65,
-      completed: 650,
-      total: 1000,
-      reward: "0.12 ICP",
-      deadline: "1 day",
-      status: "In Progress",
-    },
-    {
-      id: 2,
-      title: "NFT Metadata Verification",
-      progress: 90,
-      completed: 450,
-      total: 500,
-      reward: "0.10 ICP",
-      deadline: "3 hours",
-      status: "Almost Done",
-    },
-  ];
+        // Fetch all tasks for marketplace
+        const allTasks = await validata_backend.getAllTasks();
+        setMarketplaceTasks(allTasks);
 
-  const earnings = [
-    { date: "2024-01-15", task: "Bitcoin Risk Analysis", amount: "24.5 ICP", txHash: "0xabc123...def456", status: "Completed" },
-    { date: "2024-01-14", task: "Smart Contract Review", amount: "45.2 ICP", txHash: "0x789ghi...jkl012", status: "Completed" },
-    { date: "2024-01-13", task: "Scam Detection", amount: "12.8 ICP", txHash: "0xmno345...pqr678", status: "Completed" },
-    { date: "2024-01-12", task: "DeFi Protocol Analysis", amount: "78.1 ICP", txHash: "0xstu901...vwx234", status: "Completed" },
-  ];
+        // Fetch active tasks for this labeler
+        const labelerTasks = allTasks.filter((task) => task.workerIds.includes(authState.user?.principal || "") && !task.claimed);
+        setActiveTasks(labelerTasks);
+
+        // Update stats based on profile
+        if (profile) {
+          setStats([
+            {
+              label: "Total Earned",
+              value: `${(Number(profile.balance) / 100000000).toFixed(1)} ICP`,
+              change: "+0 this month",
+              color: "text-[#00FFB2]",
+            },
+            {
+              label: "Tasks Completed",
+              value: profile.tasksCompleted.toString(),
+              change: "+0 this week",
+              color: "text-[#9B5DE5]",
+            },
+            {
+              label: "Accuracy Rate",
+              value: "97.8%", // Placeholder, implement if you track accuracy
+              change: "+0% avg",
+              color: "text-blue-500",
+            },
+            {
+              label: "Reputation Level",
+              value: "Expert", // Placeholder, implement if you have reputation system
+              change: "Level 8",
+              color: "text-orange-500",
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, [authState, activeSection]);
+
+  // const handleTakeTask = async (taskId: string) => {
+  //   if (!authState.isAuthenticated || !authState.user) {
+  //     alert("Please login first");
+  //     return;
+  //   }
+
+  //   try {
+  //     const result = await validata_backend.takeTask(taskId);
+  //     if ("ok" in result) {
+  //       alert("Task taken successfully!");
+  //       // Refresh tasks
+  //       const allTasks = await validata_backend.getAllTasks();
+  //       setMarketplaceTasks(allTasks);
+  //     } else {
+  //       alert(`Failed to take task: ${result.err}`);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error taking task:", error);
+  //     alert("Failed to take task");
+  //   }
+  // };
+
+  const handleClaimRewards = async () => {
+    if (!authState.isAuthenticated || !authState.user) {
+      alert("Please login first");
+      return;
+    }
+
+    // This is a placeholder - you'll need to implement claim logic
+    alert("Rewards claimed successfully!");
+    // Refresh profile
+    const profileResponse = await validata_backend.getProfile(authState.user.principal);
+    if (profileResponse.length > 0) {
+      const profile = profileResponse[0];
+      setUserProfile(profile ?? null);
+    } else {
+      setUserProfile(null);
+    }
+  };
+
+  // const handleUpdateProgress = async (taskId: string, completedItems: number) => {
+  //   if (!authState.isAuthenticated || !authState.user) {
+  //     alert("Please login first");
+  //     return;
+  //   }
+
+  //   try {
+  //     const result = await validata_backend.updateProgress(taskId, BigInt(completedItems));
+  //     if ("ok" in result) {
+  //       alert("Progress updated!");
+  //       // Refresh tasks
+  //       const allTasks = await validata_backend.getAllTasks();
+  //       setActiveTasks(allTasks.filter((task) => task.workerIds.includes(authState.user?.principal || "") && !task.claimed));
+  //     } else {
+  //       alert(`Failed to update progress: ${result.err}`);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error updating progress:", error);
+  //     alert("Failed to update progress");
+  //   }
+  // };
+
+  const handleClaimPartialReward = async (taskId: string, itemsCompleted: number) => {
+    if (!authState.isAuthenticated || !authState.user) {
+      alert("Please login first");
+      return;
+    }
+
+    try {
+      const result = await validata_backend.claimPartialReward(taskId, BigInt(itemsCompleted));
+      if ("ok" in result) {
+        alert(result.ok);
+        // Refresh tasks and profile
+        const allTasks = await validata_backend.getAllTasks();
+        setActiveTasks(allTasks.filter((task) => task.workerIds.includes(authState.user?.principal || "") && !task.claimed));
+        const profile = await validata_backend.getProfile(authState.user.principal);
+        if (profile && profile.length > 0) setUserProfile(profile[0] ?? null);
+        else setUserProfile(null);
+      } else {
+        alert(`Failed to claim reward: ${result.err}`);
+      }
+    } catch (error) {
+      console.error("Error claiming reward:", error);
+      alert("Failed to claim reward");
+    }
+  };
+
+  const getDifficulty = (task: BackendTask) => {
+    if (Number(task.rewardPerLabel) < 5000000) return "Easy";
+    if (Number(task.rewardPerLabel) < 10000000) return "Medium";
+    return "Hard";
+  };
+
+  // const marketplaceTasks = [
+  //   {
+  //     id: 1,
+  //     title: "Bitcoin Transaction Risk Analysis",
+  //     client: "CryptoSecure Labs",
+  //     type: "BTC Analysis",
+  //     reward: "0.15 ICP",
+  //     totalReward: "150.0 ICP",
+  //     labels: 1000,
+  //     difficulty: "Medium",
+  //     timeEstimate: "2-3 hours",
+  //     requiredLevel: "Advanced",
+  //     description: "Analyze Bitcoin transactions for risk patterns and suspicious activities.",
+  //     skills: ["BTC", "Risk Analysis", "Pattern Recognition"],
+  //     deadline: "2 days",
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "Smart Contract Vulnerability Detection",
+  //     client: "DeFi Shield",
+  //     type: "Contract Risk",
+  //     reward: "0.25 ICP",
+  //     totalReward: "500.0 ICP",
+  //     labels: 2000,
+  //     difficulty: "Hard",
+  //     timeEstimate: "4-6 hours",
+  //     requiredLevel: "Expert",
+  //     description: "Review smart contracts for potential vulnerabilities and security issues.",
+  //     skills: ["Solidity", "Security", "Smart Contracts"],
+  //     deadline: "5 days",
+  //   },
+  //   {
+  //     id: 3,
+  //     title: "Phishing Website Classification",
+  //     client: "WebGuard Inc",
+  //     type: "Scam Detection",
+  //     reward: "0.08 ICP",
+  //     totalReward: "80.0 ICP",
+  //     labels: 1000,
+  //     difficulty: "Easy",
+  //     timeEstimate: "1-2 hours",
+  //     requiredLevel: "Beginner",
+  //     description: "Identify and classify phishing websites and scam attempts.",
+  //     skills: ["Web Security", "Phishing", "Classification"],
+  //     deadline: "3 days",
+  //   },
+  // ];
+
+  // const activeTasks = [
+  //   {
+  //     id: 1,
+  //     title: "DeFi Protocol Analysis",
+  //     progress: 65,
+  //     completed: 650,
+  //     total: 1000,
+  //     reward: "0.12 ICP",
+  //     deadline: "1 day",
+  //     status: "In Progress",
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "NFT Metadata Verification",
+  //     progress: 90,
+  //     completed: 450,
+  //     total: 500,
+  //     reward: "0.10 ICP",
+  //     deadline: "3 hours",
+  //     status: "Almost Done",
+  //   },
+  // ];
+
+  // const earnings = [
+  //   { date: "2024-01-15", task: "Bitcoin Risk Analysis", amount: "24.5 ICP", txHash: "0xabc123...def456", status: "Completed" },
+  //   { date: "2024-01-14", task: "Smart Contract Review", amount: "45.2 ICP", txHash: "0x789ghi...jkl012", status: "Completed" },
+  //   { date: "2024-01-13", task: "Scam Detection", amount: "12.8 ICP", txHash: "0xmno345...pqr678", status: "Completed" },
+  //   { date: "2024-01-12", task: "DeFi Protocol Analysis", amount: "78.1 ICP", txHash: "0xstu901...vwx234", status: "Completed" },
+  // ];
 
   return (
     <Layout title="Labeler Dashboard" subtitle="Earn rewards through quality data labeling">
@@ -161,14 +315,14 @@ export const LabelerDashboard: React.FC = () => {
                 </h2>
                 <div className="space-y-3">
                   {marketplaceTasks.slice(0, 2).map((task) => (
-                    <div key={task.id} className="p-4 border border-gray-200 rounded-xl hover:border-[#00FFB2] transition-colors cursor-pointer">
+                    <div key={task.id.toString()} className="p-4 border border-gray-200 rounded-xl hover:border-[#00FFB2] transition-colors cursor-pointer">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-[#0A0E2A] text-sm">{task.title}</h3>
-                        <span className="text-[#9B5DE5] font-bold text-sm">{task.reward}</span>
+                        <h3 className="font-medium text-[#0A0E2A] text-sm">{task.name}</h3>
+                        <span className="text-[#9B5DE5] font-bold text-sm">{(Number(task.rewardPerLabel) / 100000000).toFixed(2)} ICP</span>
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{task.labels} labels</span>
-                        <span>{task.difficulty}</span>
+                        <span>{Number(task.totalItems)} labels</span>
+                        <span>{getDifficulty(task)}</span>
                       </div>
                     </div>
                   ))}
@@ -185,10 +339,12 @@ export const LabelerDashboard: React.FC = () => {
                 <div className="space-y-4">
                   <div className="bg-gradient-to-r from-[#00FFB2]/10 to-[#00FFB2]/5 p-4 rounded-xl">
                     <div className="text-sm text-gray-600 mb-1">Available Balance</div>
-                    <div className="text-2xl font-bold text-[#00FFB2]">2,847.3 ICP</div>
+                    <div className="text-2xl font-bold text-[#00FFB2]">{userProfile ? `${(Number(userProfile.balance) / 100000000).toFixed(1)} ICP` : "Loading..."}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <button className="bg-[#00FFB2] text-[#0A0E2A] py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors text-sm">Claim Rewards</button>
+                    <button onClick={handleClaimRewards} className="bg-[#00FFB2] text-[#0A0E2A] py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors text-sm">
+                      Claim Rewards
+                    </button>
                     <button className="bg-[#9B5DE5] text-white py-2 rounded-xl font-medium hover:bg-[#9B5DE5]/90 transition-colors text-sm">Stake ICP</button>
                   </div>
                 </div>
@@ -218,46 +374,50 @@ export const LabelerDashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {marketplaceTasks.map((task) => (
-                <div key={task.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div key={task.id.toString()} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-[#0A0E2A] mb-1" style={{ fontFamily: "Sora, sans-serif" }}>
-                        {task.title}
+                        {task.name}
                       </h3>
-                      <p className="text-sm text-gray-600">{task.client}</p>
+                      <p className="text-sm text-gray-600">{task.taskType}</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${task.difficulty === "Easy" ? "bg-green-100 text-green-800" : task.difficulty === "Medium" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}>
-                        {task.difficulty}
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          getDifficulty(task) === "Easy" ? "bg-green-100 text-green-800" : getDifficulty(task) === "Medium" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {getDifficulty(task)}
                       </span>
-                      <span className="text-xs text-gray-500">Due: {task.deadline}</span>
+                      {/* <span className="text-xs text-gray-500">Due: {task.deadline}</span> */}
                     </div>
                   </div>
 
                   <p className="text-sm text-gray-600 mb-4">{task.description}</p>
 
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {task.skills.map((skill) => (
+                    {/* {task.skills.map((skill: string) => (
                       <span key={skill} className="px-2 py-1 bg-[#00FFB2]/10 text-[#00FFB2] rounded-lg text-xs font-medium">
                         {skill}
                       </span>
-                    ))}
+                    ))} */}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="bg-gray-50 p-3 rounded-xl">
                       <div className="text-xs text-gray-500 mb-1">Reward per Label</div>
-                      <div className="text-lg font-bold text-[#9B5DE5]">{task.reward}</div>
+                      <div className="text-lg font-bold text-[#9B5DE5]">{Number(task.prize)}</div>
                     </div>
                     <div className="bg-gray-50 p-3 rounded-xl">
                       <div className="text-xs text-gray-500 mb-1">Total Potential</div>
-                      <div className="text-lg font-bold text-[#00FFB2]">{task.totalReward}</div>
+                      <div className="text-lg font-bold text-[#00FFB2]">{Number(task.prize)}</div>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-gray-600">
-                      <span className="font-medium">{task.labels}</span> labels • {task.timeEstimate}
+                      <span className="font-medium">{Number(task.totalItems)}</span> labels
                     </div>
                     <button className="bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors">Start Task</button>
                   </div>
@@ -279,35 +439,46 @@ export const LabelerDashboard: React.FC = () => {
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
                   <div>
                     <h3 className="text-lg font-semibold text-[#0A0E2A]" style={{ fontFamily: "Sora, sans-serif" }}>
-                      {task.title}
+                      {task.name}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {task.completed} / {task.total} labels completed
+                      {Number(task.completedItems)} / {Number(task.totalItems)} labels completed
                     </p>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className="text-sm text-[#9B5DE5] font-medium">{task.reward} per label</span>
-                    <span className="text-sm text-gray-500">Due: {task.deadline}</span>
+                    <span className="text-sm text-[#9B5DE5] font-medium">{(Number(task.rewardPerLabel) / 100000000).toFixed(2)} ICP per label</span>
+                    {/* <span className="text-sm text-gray-500">Due: {task.deadline}</span> */}
                   </div>
                 </div>
 
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">Progress</span>
-                    <span className="text-sm font-medium text-[#0A0E2A]">{task.progress}%</span>
+                    <span className="text-sm font-medium text-[#0A0E2A]">{Number(task.progress)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-[#00FFB2] h-2 rounded-full transition-all duration-300" style={{ width: `${task.progress}%` }} />
+                    <div className="bg-[#00FFB2] h-2 rounded-full transition-all duration-300" style={{ width: `${Number(task.progress)}%` }} />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    <span className="font-medium">{task.status}</span>
+                    <span className="font-medium">{Number(task.completedItems) === Number(task.totalItems) ? "Completed" : "In Progress"}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button className="bg-[#F2F2F2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-gray-300 transition-colors">Pause</button>
-                    <button className="bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors">Continue</button>
+                    {Number(task.completedItems) < Number(task.totalItems) && (
+                      <button onClick={() => handleClaimPartialReward(task.id.toString(), 10)} className="bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors">
+                        Claim Partial Reward
+                      </button>
+                    )}
+                    {Number(task.completedItems) === Number(task.totalItems) && (
+                      <button
+                        onClick={() => handleClaimPartialReward(task.id.toString(), Number(task.totalItems) - Number(task.completedItems))}
+                        className="bg-[#9B5DE5] text-white px-4 py-2 rounded-xl font-medium hover:bg-[#9B5DE5]/90 transition-colors"
+                      >
+                        Claim Full Reward
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -370,7 +541,7 @@ export const LabelerDashboard: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-gradient-to-r from-[#00FFB2] to-[#00FFB2]/80 p-4 rounded-xl text-white">
                   <div className="text-sm mb-1">Available Balance</div>
-                  <div className="text-2xl font-bold">2,847.3 ICP</div>
+                  <div className="text-2xl font-bold">{userProfile ? `${(Number(userProfile.balance) / 100000000).toFixed(1)} ICP` : "Loading..."}</div>
                 </div>
                 <div className="bg-gradient-to-r from-[#9B5DE5] to-[#9B5DE5]/80 p-4 rounded-xl text-white">
                   <div className="text-sm mb-1">Pending Rewards</div>
@@ -382,7 +553,9 @@ export const LabelerDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                <button className="bg-[#00FFB2] text-[#0A0E2A] py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors">Claim Rewards</button>
+                <button onClick={handleClaimRewards} className="bg-[#00FFB2] text-[#0A0E2A] py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors">
+                  Claim Rewards
+                </button>
                 <button className="bg-[#9B5DE5] text-white py-2 rounded-xl font-medium hover:bg-[#9B5DE5]/90 transition-colors">Stake ICP</button>
                 <button className="bg-[#F2F2F2] text-[#0A0E2A] py-2 rounded-xl font-medium hover:bg-gray-300 transition-colors">Withdraw</button>
               </div>
