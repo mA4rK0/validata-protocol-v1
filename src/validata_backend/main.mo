@@ -44,7 +44,6 @@ actor class TaskManager() {
         balance : Nat;
         tasksCompleted : Nat;
         role : UserRole;
-        reputation: Nat;
     };
     
     var userProfiles = HashMap.HashMap<Text, UserProfile>(0, Text.equal, Text.hash);
@@ -57,10 +56,9 @@ actor class TaskManager() {
             case (null) {
                 let newProfile : UserProfile = {
                     id = userId;
-                    balance = 0;
+                    balance = 50_000_000_000;
                     tasksCompleted = 0;
                     role = #Client;
-                    reputation = 25;
                 };
                 userProfiles.put(userId, newProfile);
                 newProfile
@@ -73,14 +71,14 @@ actor class TaskManager() {
 
         let companyTasks = Iter.filter(
             allTasks, 
-            func ((id, task) : (Text, Task)) : Bool {
+            func ((_id, task) : (Text, Task)) : Bool {
                 task.companyId == companyId
             }
         );
 
         let tasksOnly = Iter.map(
             companyTasks,
-            func ((id, task) : (Text, Task)) : Task { task }
+            func ((_id, task) : (Text, Task)) : Task { task }
         );
 
         Iter.toArray(tasksOnly);
@@ -130,10 +128,7 @@ actor class TaskManager() {
         if (name == "") {
             return #err("Task name required");
         };
-        if (totalItems == 0) {
-            return #err("Total items must be greater than 0");
-        };
-        if (rewardPerLabel == 0) {
+        if (rewardPerLabel <= 0) {
             return #err("Reward per label must be positive");
         };
         if (qualityThreshold == "") {
@@ -151,6 +146,7 @@ actor class TaskManager() {
         };
 
         let updatedBalance = companyProfile.balance - prize;
+        assert(updatedBalance >= 0);
 
         if (updatedBalance < 0) {
             return #err("Insufficient company balance");
@@ -181,7 +177,7 @@ actor class TaskManager() {
             progress = 0;
             claimed = false;
             labelerCount = 0;
-            avgAccuracy = 0.0;
+            avgAccuracy = 96.0;
             dataset = dataset;
         };
 
@@ -191,26 +187,26 @@ actor class TaskManager() {
     };
 
     public shared({caller}) func takeTask(taskId : Text) : async Result.Result<Text, Text> {
-        let workerId = Principal.toText(caller);
+    let workerId = Principal.toText(caller);
     
         switch (tasks.get(taskId)) {
-            case null { #err("Task not found") };
-            case (?task) {
-                // Periksa apakah worker sudah mengambil task ini
-                if (Array.find(task.workerIds, func (id : Text) : Bool { id == workerId }) != null) {
-                    return #err("Task already taken");
-                };
+                case null { #err("Task not found") };
+                case (?task) {
+                    // Periksa apakah worker sudah mengambil task ini
+                    if (Array.find(task.workerIds, func (id : Text) : Bool { id == workerId }) != null) {
+                        return #err("Task already taken");
+                    };
 
-                // Tambahkan worker ke task
-                let updatedWorkerIds = Array.append(task.workerIds, [workerId]);
-                let updatedTask = {
-                    task with 
-                    workerIds = updatedWorkerIds
-                };
-                tasks.put(taskId, updatedTask);
-                #ok("Task taken")
+                    // Tambahkan worker ke task
+                    let updatedWorkerIds = Array.append(task.workerIds, [workerId]);
+                    let updatedTask = {
+                        task with 
+                        workerIds = updatedWorkerIds
+                    };
+                    tasks.put(taskId, updatedTask);
+                    #ok("Task taken")
+                }
             }
-        }
     };
 
     public shared({caller}) func claimPartialReward(taskId: Text, itemsCompleted: Nat) : async Result.Result<Text, Text> {
@@ -250,14 +246,18 @@ actor class TaskManager() {
                 
                 let newCompletedItems = claimableItems;
                 let newProgress = if (task.totalItems > 0) {
-                    (newCompletedItems * 100) / task.totalItems
+                    Nat.div(Nat.mul(newCompletedItems, 100), task.totalItems)
                 } else { 0 };
                 
                 let updatedTask = {
                     task with
                     completedItems = newCompletedItems;
                     progress = newProgress;
-                    prize = task.prize - rewardAmount;
+                    prize = if (task.prize >= rewardAmount) {
+                        task.prize - rewardAmount
+                    } else {
+                        0
+                    };
                 };
                 
                 tasks.put(taskId, updatedTask);
@@ -274,19 +274,41 @@ actor class TaskManager() {
         userProfiles.put(userId, {profile with balance = profile.balance + amount});
     };
 
-    public query func getBalance(user : Text) : async Nat {
-        switch (userProfiles.get(user)) {
+    public shared({caller}) func getBalance() : async Nat {
+        let userId = Principal.toText(caller);
+        switch (userProfiles.get(userId)) {
             case (?profile) { profile.balance };
             case (null) { 0 };
         }
+    };
+
+    public shared({caller}) func getLabelerTasks() : async [Task] {
+        let workerId = Principal.toText(caller);
+        let allTasks = Iter.toArray(tasks.vals());
+        
+        Array.filter(
+            allTasks,
+            func (task: Task) : Bool {
+                Array.find(task.workerIds, func (id: Text) : Bool { id == workerId }) != null
+            }
+        );
     };
 
     public shared query func getTask(taskId : Text) : async ?Task {
         return tasks.get(taskId);
     };
 
+    public query func getAllTasks() : async [Task] {
+        Iter.toArray(tasks.vals())
+    };
+
+    public shared({caller}) func getMyProfile() : async ?UserProfile {
+        let userId = Principal.toText(caller);
+        return userProfiles.get(userId);
+    };
+
     // Query to view a user's profile
-    public shared query func getProfile(userId : Text) : async ?UserProfile {
+    public shared func getProfile(userId: Text) : async ?UserProfile {
         return userProfiles.get(userId);
     };
 };
