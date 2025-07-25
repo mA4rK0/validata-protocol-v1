@@ -85,12 +85,12 @@ export const ClientDashboard: React.FC = () => {
     }
   };
 
-  const filteredTasks = showTasks?.filter((task) => {
-    if (!searchTerm) return true;
+  // const filteredTasks = showTasks?.filter((task) => {
+  //   if (!searchTerm) return true;
 
-    const lowerSearch = searchTerm.toLowerCase();
-    return task.name.toLowerCase().includes(lowerSearch) || task.taskType.toLowerCase().includes(lowerSearch) || task.description.toLowerCase().includes(lowerSearch) || task.id.toString().includes(lowerSearch);
-  });
+  //   const lowerSearch = searchTerm.toLowerCase();
+  //   return task.name.toLowerCase().includes(lowerSearch) || task.taskType.toLowerCase().includes(lowerSearch) || task.description.toLowerCase().includes(lowerSearch) || task.id.toString().includes(lowerSearch);
+  // });
 
   const handleCreateTask = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -120,22 +120,22 @@ export const ClientDashboard: React.FC = () => {
       return;
     }
 
-    const taskData = {
-      taskName: formData.taskName,
-      taskType: formData.taskType,
-      rewardPerLabel: Math.round(parseFloat(formData.rewardPerLabel) * 100000000),
-      qualityThreshold: formData.qualityThreshold,
-      labelingInstructions: formData.labelingInstructions,
-      description: formData.description,
-      creatorPrincipal: authState.user.principal,
-      creatorRole: authState.user.role,
-      totalItems: formData.totalItems,
-      dataset: {
-        name: selectedFile.name,
-        size: selectedFile.size,
-        type: selectedFile.type,
-      },
-    };
+    // const taskData = {
+    //   taskName: formData.taskName,
+    //   taskType: formData.taskType,
+    //   rewardPerLabel: Math.round(parseFloat(formData.rewardPerLabel) * 100000000),
+    //   qualityThreshold: formData.qualityThreshold,
+    //   labelingInstructions: formData.labelingInstructions,
+    //   description: formData.description,
+    //   creatorPrincipal: authState.user.principal,
+    //   creatorRole: authState.user.role,
+    //   totalItems: formData.totalItems,
+    //   dataset: {
+    //     name: selectedFile.name,
+    //     size: selectedFile.size,
+    //     type: selectedFile.type,
+    //   },
+    // };
 
     // TODO: Call API to create task
     // try {
@@ -522,7 +522,7 @@ export const ClientDashboard: React.FC = () => {
 
                 {task.status === "Completed" && (
                   <div className="flex justify-end">
-                    <button className="flex items-center bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors" onClick={() => handleDownloadResults(task.id)}>
+                    <button className="flex items-center bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors" onClick={() => handleDownloadResults()}>
                       <Download className="w-4 h-4 mr-2" />
                       Download Results
                     </button>
