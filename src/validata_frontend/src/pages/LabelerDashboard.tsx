@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Search, Filter, Star, Award, Wallet, TrendingUp, Tag, CheckCircle2, Clock, ExternalLink, Target } from "lucide-react";
 import { Layout } from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
-import { validata_backend } from "declarations/validata_backend";
-import { Task as BackendTask, UserProfile } from "declarations/validata_backend/validata_backend.did";
+import { validata_backend } from "../../../declarations/validata_backend";
+import { Task as BackendTask, UserProfile } from "../../../declarations/validata_backend/validata_backend.did";
 
 export const LabelerDashboard: React.FC = () => {
   const { authState } = useAuth();
@@ -19,24 +19,14 @@ export const LabelerDashboard: React.FC = () => {
     { label: "Reputation Level", value: "Beginner", change: "Level 0", color: "text-orange-500" },
   ]);
 
-  interface UserProfile {
-    id: string;
-    balance: bigint;
-    tasksCompleted: bigint;
-    role: unknown;
-    reputation?: bigint;
-  }
-
   useEffect(() => {
     const fetchData = async () => {
       if (!authState.isAuthenticated || !authState.user) return;
 
       try {
         // Fetch user profile
-        const profileResponse = await validata_backend.getProfile(authState.user.principal);
-        const profile = Array.isArray(profileResponse) && profileResponse.length > 0 ? profileResponse[0] : null;
-        setUserProfile(profile || null);
-
+        const profile = await validata_backend.getProfile(authState.user.principal);
+        setUserProfile(profile?.[0] ?? null);
         // Fetch all tasks for marketplace
         const allTasks = await validata_backend.getAllTasks();
         const availableTasks = allTasks.filter((task: BackendTask) => !task.workerIds.includes(authState.user?.principal || ""));
@@ -47,39 +37,30 @@ export const LabelerDashboard: React.FC = () => {
         setActiveTasks(takenTasks);
 
         // Update stats based on profile
-        if (userProfile) {
-          const reputationScore = userProfile.reputation ? Number(userProfile.reputation) : 25;
-          const reputation = calculateReputationLevel(reputationScore);
-
+        if (profile && profile.length > 0) {
           setStats([
             {
-              label: "Reputation Level",
-              value: reputation.level,
-              change: `Level ${reputation.levelNum}`,
-              color: "text-orange-500",
-            },
-            {
               label: "Total Earned",
-              value: `${(Number(userProfile.balance) / 100000000).toFixed(1)} ICP`,
+              value: `${(Number(profile?.[0]?.balance) / 100000000).toFixed(1)} ICP`,
               change: "+0 this month",
               color: "text-[#00FFB2]",
             },
             {
               label: "Tasks Completed",
-              value: userProfile.tasksCompleted.toString(),
+              value: (profile[0]?.tasksCompleted ?? 0).toString(),
               change: "+0 this week",
               color: "text-[#9B5DE5]",
             },
             {
               label: "Accuracy Rate",
-              value: "97.8%", // Ini masih placeholder
+              value: "97.8%", // Placeholder, implement if you track accuracy
               change: "+0% avg",
               color: "text-blue-500",
             },
             {
               label: "Reputation Level",
-              value: reputation.level,
-              change: `Level ${reputation.levelNum}`,
+              value: "Expert", // Placeholder, implement if you have reputation system
+              change: "Level 8",
               color: "text-orange-500",
             },
           ]);
@@ -90,7 +71,7 @@ export const LabelerDashboard: React.FC = () => {
     };
 
     fetchData();
-  }, [authState, activeSection, userProfile]);
+  }, [authState, activeSection]);
 
   const handleTakeTask = async (taskId: string) => {
     if (!authState.isAuthenticated || !authState.user) {
@@ -122,15 +103,6 @@ export const LabelerDashboard: React.FC = () => {
       console.error("Error taking task:", error);
       alert("Failed to take task");
     }
-  };
-
-  const calculateReputationLevel = (reputationScore: number) => {
-    reputationScore = reputationScore || 25;
-    if (reputationScore >= 90) return { level: "Expert", levelNum: 10, xp: reputationScore * 10 };
-    if (reputationScore >= 70) return { level: "Advanced", levelNum: 8, xp: reputationScore * 10 };
-    if (reputationScore >= 50) return { level: "Intermediate", levelNum: 6, xp: reputationScore * 10 };
-    if (reputationScore >= 30) return { level: "Beginner+", levelNum: 4, xp: reputationScore * 10 };
-    return { level: "Beginner", levelNum: 2, xp: reputationScore * 10 };
   };
 
   const handleClaimRewards = async () => {
@@ -328,35 +300,21 @@ export const LabelerDashboard: React.FC = () => {
             {/* Reputation Progress */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[#0A0E2A]">Reputation Progress</h2>
-                {userProfile && (
-                  <div className="flex items-center space-x-2">
-                    <Star className="w-5 h-5 text-orange-500" />
-                    <span className="text-sm text-gray-600">
-                      Level {calculateReputationLevel(userProfile.reputation ? Number(userProfile.reputation) : 25).levelNum} - {calculateReputationLevel(userProfile.reputation ? Number(userProfile.reputation) : 25).level}
-                    </span>
-                  </div>
-                )}
+                <h2 className="text-lg font-semibold text-[#0A0E2A]" style={{ fontFamily: "Sora, sans-serif" }}>
+                  Reputation Progress
+                </h2>
+                <div className="flex items-center space-x-2">
+                  <Star className="w-5 h-5 text-orange-500" />
+                  <span className="text-sm text-gray-600">Level 8 - Expert</span>
+                </div>
               </div>
-
-              {userProfile ? (
-                <>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-gradient-to-r from-orange-500 to-[#00FFB2] h-3 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${userProfile.reputation ? Number(userProfile.reputation) : 25}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-500 mt-2">
-                    <span>{userProfile.reputation ? Number(userProfile.reputation) : 25} XP</span>
-                    <span>Next Level: {userProfile.reputation ? (Number(userProfile.reputation) < 100 ? Number(userProfile.reputation) + 10 : 100) : 35} XP</span>
-                  </div>
-                </>
-              ) : (
-                <p>Loading reputation...</p>
-              )}
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="bg-gradient-to-r from-orange-500 to-[#00FFB2] h-3 rounded-full transition-all duration-500" style={{ width: "75%" }} />
+              </div>
+              <div className="flex justify-between text-sm text-gray-500 mt-2">
+                <span>2,847 XP</span>
+                <span>Next Level: 3,200 XP</span>
+              </div>
             </div>
 
             {/* Quick Actions */}
@@ -427,6 +385,7 @@ export const LabelerDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {marketplaceTasks.map((task) => {
                 const isTaken = task.workerIds.includes(authState.user?.principal || "");
+
                 return (
                   <div key={task.id.toString()} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-4">
@@ -461,7 +420,7 @@ export const LabelerDashboard: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="bg-gray-50 p-3 rounded-xl">
                         <div className="text-xs text-gray-500 mb-1">Reward per Label</div>
-                        <div className="text-lg font-bold text-[#9B5DE5]">{(Number(task.rewardPerLabel) / 100000000).toFixed(2)} ICP</div>
+                        <div className="text-lg font-bold text-[#9B5DE5]">{Number(task.prize)}</div>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-xl">
                         <div className="text-xs text-gray-500 mb-1">Total Potential</div>
@@ -473,11 +432,7 @@ export const LabelerDashboard: React.FC = () => {
                       <div className="text-sm text-gray-600">
                         <span className="font-medium">{Number(task.totalItems)}</span> labels
                       </div>
-                      <button
-                        onClick={() => !isTaken && handleTakeTask(task.id.toString())}
-                        disabled={isTaken}
-                        className={`bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors ${isTaken ? "bg-gray-300 cursor-not-allowed" : ""}`}
-                      >
+                      <button onClick={() => !isTaken && handleTakeTask(task.id.toString())} disabled={isTaken} className={`... ${isTaken ? "bg-gray-300 cursor-not-allowed" : ""}`}>
                         {isTaken ? "Taken" : "Start Task"}
                       </button>
                     </div>

@@ -76,7 +76,7 @@ export const useAuthState = () => {
     }
   };
 
-  const login = async (role?: "client" | "labeler" | "admin" | null) => {
+  const login = async (role?: "client" | "labeler" | "admin") => {
     if (!authClient) return;
 
     try {
@@ -174,10 +174,9 @@ export const useAuthState = () => {
 };
 
 // Simulate backend API calls
-const fetchUserRole = async (principal: string): Promise<"client" | "labeler" | "admin" | null> => {
-  // In a real app, this would be an API call to your backend canister
+const fetchUserRole = async (principal: string): Promise<"client" | "labeler" | "admin" | undefined> => {
   const stored = localStorage.getItem(`user_role_${principal}`);
-  return stored as "client" | "labeler" | "admin" | null;
+  return stored as "client" | "labeler" | "admin" | undefined;
 };
 
 const saveUserRole = async (principal: string, role: "client" | "labeler" | "admin"): Promise<void> => {

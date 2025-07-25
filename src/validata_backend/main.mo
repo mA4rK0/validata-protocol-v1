@@ -44,7 +44,6 @@ actor class TaskManager() {
         balance : Nat;
         tasksCompleted : Nat;
         role : UserRole;
-        reputation: Nat;
     };
     
     var userProfiles = HashMap.HashMap<Text, UserProfile>(0, Text.equal, Text.hash);
@@ -60,7 +59,6 @@ actor class TaskManager() {
                     balance = 50_000_000_000;
                     tasksCompleted = 0;
                     role = #Client;
-                    reputation = 25;
                 };
                 userProfiles.put(userId, newProfile);
                 newProfile
@@ -148,6 +146,7 @@ actor class TaskManager() {
         };
 
         let updatedBalance = companyProfile.balance - prize;
+        assert(updatedBalance >= 0);
 
         if (updatedBalance < 0) {
             return #err("Insufficient company balance");
@@ -188,26 +187,26 @@ actor class TaskManager() {
     };
 
     public shared({caller}) func takeTask(taskId : Text) : async Result.Result<Text, Text> {
-        let workerId = Principal.toText(caller);
+    let workerId = Principal.toText(caller);
     
         switch (tasks.get(taskId)) {
-            case null { #err("Task not found") };
-            case (?task) {
-                // Periksa apakah worker sudah mengambil task ini
-                if (Array.find(task.workerIds, func (id : Text) : Bool { id == workerId }) != null) {
-                    return #err("Task already taken");
-                };
+                case null { #err("Task not found") };
+                case (?task) {
+                    // Periksa apakah worker sudah mengambil task ini
+                    if (Array.find(task.workerIds, func (id : Text) : Bool { id == workerId }) != null) {
+                        return #err("Task already taken");
+                    };
 
-                // Tambahkan worker ke task
-                let updatedWorkerIds = Array.append(task.workerIds, [workerId]);
-                let updatedTask = {
-                    task with 
-                    workerIds = updatedWorkerIds
-                };
-                tasks.put(taskId, updatedTask);
-                #ok("Task taken")
+                    // Tambahkan worker ke task
+                    let updatedWorkerIds = Array.append(task.workerIds, [workerId]);
+                    let updatedTask = {
+                        task with 
+                        workerIds = updatedWorkerIds
+                    };
+                    tasks.put(taskId, updatedTask);
+                    #ok("Task taken")
+                }
             }
-        }
     };
 
     public shared({caller}) func claimPartialReward(taskId: Text, itemsCompleted: Nat) : async Result.Result<Text, Text> {
@@ -254,7 +253,11 @@ actor class TaskManager() {
                     task with
                     completedItems = newCompletedItems;
                     progress = newProgress;
-                    prize = task.prize - rewardAmount;
+                    prize = if (task.prize >= rewardAmount) {
+                        task.prize - rewardAmount
+                    } else {
+                        0
+                    };
                 };
                 
                 tasks.put(taskId, updatedTask);
