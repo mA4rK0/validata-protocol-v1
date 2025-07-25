@@ -1,6 +1,6 @@
 export interface User {
   principal: string;
-  role?: "client" | "labeler" | "admin" | null;
+  role?: 'client' | 'labeler' | 'admin';
   profile?: {
     username?: string;
     email?: string;

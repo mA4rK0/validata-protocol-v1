@@ -1,99 +1,60 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { Upload, Plus, Download, Clock, CheckCircle, X, AlertCircle, Copy, Eye, Filter, Search } from "lucide-react";
 import { Layout } from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
-import { validata_backend } from "declarations/validata_backend";
-import { Task as BackendTask } from "declarations/validata_backend/validata_backend.did";
 
 export const ClientDashboard: React.FC = () => {
   const { authState } = useAuth();
   const [activeSection, setActiveSection] = useState<"overview" | "upload" | "tasks" | "history">("overview");
-  const [showTasks, setShowTasks] = useState<BackendTask[] | null>(null);
-  const [userBalance, setUserBalance] = useState<number>(0);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [stats, setStats] = useState([
-    { label: "Active Tasks", value: "0", change: "+0 this week", color: "text-[#00FFB2]" },
-    { label: "Total Labels", value: "0", change: "+0 today", color: "text-[#9B5DE5]" },
-    { label: "Escrow Balance", value: "0 ICP", change: "Available", color: "text-blue-500" },
-    { label: "Completion Rate", value: "0%", change: "+0% avg", color: "text-green-500" },
-  ]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const tasks = await validata_backend.getAllTasks();
-        setShowTasks(tasks);
+  const stats = [
+    { label: "Active Tasks", value: "12", change: "+3 this week", color: "text-[#00FFB2]" },
+    { label: "Total Labels", value: "45,230", change: "+2,341 today", color: "text-[#9B5DE5]" },
+    { label: "Escrow Balance", value: "892.4 ICP", change: "Available", color: "text-blue-500" },
+    { label: "Completion Rate", value: "94.2%", change: "+1.3% avg", color: "text-green-500" },
+  ];
 
-        if (authState.isAuthenticated && authState.user) {
-          const balance = await validata_backend.getBalance();
-          console.log("Balance from backend:", balance);
-          setUserBalance(Number(balance) / 100000000);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchData();
-  }, [activeSection, authState]);
-
-  useEffect(() => {
-    if (showTasks) {
-      // Calculate stats based on tasks
-      const activeTasksCount = showTasks.length;
-      const totalLabels = showTasks.reduce((sum, task) => sum + Number(task.completedItems), 0);
-      const averageProgress = showTasks.reduce((sum, task) => sum + Number(task.progress), 0) / showTasks.length;
-
-      setStats([
-        { label: "Active Tasks", value: activeTasksCount.toString(), change: "+0 this week", color: "text-[#00FFB2]" },
-        { label: "Total Labels", value: totalLabels.toLocaleString(), change: "+0 today", color: "text-[#9B5DE5]" },
-        { label: "Escrow Balance", value: `${userBalance.toFixed(2)} ICP`, change: "Available", color: "text-blue-500" },
-        { label: "Completion Rate", value: `${averageProgress.toFixed(1)}%`, change: "+0% avg", color: "text-green-500" },
-      ]);
-    }
-  }, [showTasks, userBalance]);
-
-  // const tasks = [
-  //   {
-  //     id: 1,
-  //     name: "Bitcoin Transaction Classification",
-  //     type: "BTC Analysis",
-  //     progress: 75,
-  //     status: "In Progress",
-  //     escrow: "125.0 ICP",
-  //     labels: "1,250 / 1,667",
-  //     created: "2 days ago",
-  //     hash: "0xab12...cd34",
-  //     labelers: 8,
-  //     avgAccuracy: 96.2,
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Smart Contract Risk Assessment",
-  //     type: "Contract Risk",
-  //     progress: 100,
-  //     status: "Completed",
-  //     escrow: "200.0 ICP",
-  //     labels: "2,000 / 2,000",
-  //     created: "1 week ago",
-  //     hash: "0x56ef...gh78",
-  //     labelers: 12,
-  //     avgAccuracy: 98.1,
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Scam Detection Dataset",
-  //     type: "Scam Detection",
-  //     progress: 45,
-  //     status: "In Progress",
-  //     escrow: "300.0 ICP",
-  //     labels: "900 / 2,000",
-  //     created: "3 days ago",
-  //     hash: "0x9ijk...lm90",
-  //     labelers: 15,
-  //     avgAccuracy: 94.8,
-  //   },
-  // ];
+  const tasks = [
+    {
+      id: 1,
+      name: "Bitcoin Transaction Classification",
+      type: "BTC Analysis",
+      progress: 75,
+      status: "In Progress",
+      escrow: "125.0 ICP",
+      labels: "1,250 / 1,667",
+      created: "2 days ago",
+      hash: "0xab12...cd34",
+      labelers: 8,
+      avgAccuracy: 96.2,
+    },
+    {
+      id: 2,
+      name: "Smart Contract Risk Assessment",
+      type: "Contract Risk",
+      progress: 100,
+      status: "Completed",
+      escrow: "200.0 ICP",
+      labels: "2,000 / 2,000",
+      created: "1 week ago",
+      hash: "0x56ef...gh78",
+      labelers: 12,
+      avgAccuracy: 98.1,
+    },
+    {
+      id: 3,
+      name: "Scam Detection Dataset",
+      type: "Scam Detection",
+      progress: 45,
+      status: "In Progress",
+      escrow: "300.0 ICP",
+      labels: "900 / 2,000",
+      created: "3 days ago",
+      hash: "0x9ijk...lm90",
+      labelers: 15,
+      avgAccuracy: 94.8,
+    },
+  ];
 
   const [selectedFile, setSelectedFile] = useState<null | File>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -106,7 +67,7 @@ export const ClientDashboard: React.FC = () => {
     qualityThreshold: "High (95%+)",
     labelingInstructions: "",
     description: "",
-    totalItems: 2000,
+    totalItems: 0,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -177,24 +138,15 @@ export const ClientDashboard: React.FC = () => {
     };
 
     // TODO: Call API to create task
-    try {
-      const fileReader = new FileReader();
-      fileReader.readAsArrayBuffer(selectedFile);
-      const dataset = await new Promise<ArrayBuffer>((resolve, reject) => {
-        fileReader.onload = () => resolve(fileReader.result as ArrayBuffer);
-        fileReader.onerror = () => reject(new Error("Failed to read file"));
-      });
-
-      const uint8Array = new Uint8Array(dataset);
-
-      const makeATask = await validata_backend.makeTask(taskData.taskName, taskData.taskType, taskData.description, taskData.qualityThreshold, BigInt(taskData.totalItems), BigInt(taskData.rewardPerLabel), uint8Array);
-      console.log("Task created:", taskData, makeATask);
-      console.log("Dataset:", selectedFile.name);
-      console.log("Creator principal:", authState.user.principal);
-      alert("Task created successfully!");
-    } catch (error) {
-      console.error("Error creating task:", error);
-    }
+    // try {
+    //   const makeATask = await main_canister.makeTask(taskData.taskName, taskData.taskType, taskData.description, taskData.qualityThreshold, taskData.totalItems, taskData.rewardPerLabel, taskData.dataset);
+    //   console.log("Task created:", taskData, makeATask);
+    //   console.log("Dataset:", selectedFile.name);
+    //   console.log("Creator principal:", authState.user.principal);
+    //   alert("Task created successfully!");
+    // } catch (error) {
+    //   console.error("Error creating task:", error);
+    // }
 
     setFormData({
       taskName: "",
@@ -203,7 +155,7 @@ export const ClientDashboard: React.FC = () => {
       qualityThreshold: "High (95%+)",
       labelingInstructions: "",
       description: "",
-      totalItems: 2000,
+      totalItems: 0,
     });
 
     resetFileUpload();
@@ -274,29 +226,6 @@ export const ClientDashboard: React.FC = () => {
     }
 
     setSelectedFile(file);
-  };
-
-  const formatTimeAgo = (timestamp: bigint): string => {
-    const timeMs = Number(timestamp) / 1000000;
-    const now = Date.now();
-    const secondsAgo = Math.floor((now - timeMs) / 1000);
-
-    if (secondsAgo < 60) {
-      return `${secondsAgo} seconds ago`;
-    }
-
-    const minutesAgo = Math.floor(secondsAgo / 60);
-    if (minutesAgo < 60) {
-      return `${minutesAgo} minutes ago`;
-    }
-
-    const hoursAgo = Math.floor(minutesAgo / 60);
-    if (hoursAgo < 24) {
-      return `${hoursAgo} hours ago`;
-    }
-
-    const daysAgo = Math.floor(hoursAgo / 24);
-    return `${daysAgo} days ago`;
   };
 
   return (
@@ -514,7 +443,7 @@ export const ClientDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Active Tasks Section */}
+        {/* Tasks Section */}
         {activeSection === "tasks" && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -539,23 +468,23 @@ export const ClientDashboard: React.FC = () => {
               </div>
             </div>
 
-            {filteredTasks?.map((task) => (
-              <div key={task.id.toString()} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            {tasks.map((task) => (
+              <div key={task.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
                   <div>
                     <h3 className="text-lg font-semibold text-[#0A0E2A]" style={{ fontFamily: "Sora, sans-serif" }}>
                       {task.name}
                     </h3>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mt-1">
-                      <span>{task.taskType}</span>
+                      <span>{task.type}</span>
                       <span>•</span>
-                      <span>{formatTimeAgo(task.createdAt)}</span>
+                      <span>{task.created}</span>
                       <span>•</span>
-                      <span>{task.labelerCount.toString()} labelers</span>
+                      <span>{task.labelers} labelers</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${task.claimed === true ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{task.claimed === true ? "Completed" : "In Progress"}</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${task.status === "Completed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{task.status}</span>
                     <button className="p-2 hover:bg-gray-100 rounded-xl">
                       <Eye className="w-4 h-4 text-gray-500" />
                     </button>
@@ -565,20 +494,18 @@ export const ClientDashboard: React.FC = () => {
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                   <div className="bg-gray-50 p-3 rounded-xl">
                     <div className="text-xs text-gray-500 mb-1">Progress</div>
-                    <div className="text-sm font-medium text-[#0A0E2A]">{Number(task.progress)}%</div>
+                    <div className="text-sm font-medium text-[#0A0E2A]">{task.progress}%</div>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                       <div className="bg-[#00FFB2] h-2 rounded-full transition-all duration-300" style={{ width: `${task.progress}%` }} />
                     </div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-xl">
                     <div className="text-xs text-gray-500 mb-1">Labels</div>
-                    <div className="text-sm font-medium text-[#0A0E2A]">
-                      {Number(task.completedItems)} / {Number(task.totalItems)}
-                    </div>
+                    <div className="text-sm font-medium text-[#0A0E2A]">{task.labels}</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-xl">
                     <div className="text-xs text-gray-500 mb-1">Escrow</div>
-                    <div className="text-sm font-medium text-[#9B5DE5]">{(Number(task.prize) / 100000000).toFixed(1)} ICP</div>
+                    <div className="text-sm font-medium text-[#9B5DE5]">{task.escrow}</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-xl">
                     <div className="text-xs text-gray-500 mb-1">Avg Accuracy</div>
@@ -587,16 +514,16 @@ export const ClientDashboard: React.FC = () => {
                   <div className="bg-gray-50 p-3 rounded-xl">
                     <div className="text-xs text-gray-500 mb-1">Contract Hash</div>
                     <div className="flex items-center">
-                      <span className="text-xs font-mono text-[#0A0E2A] mr-2">0xab12...cd34</span>
+                      <span className="text-xs font-mono text-[#0A0E2A] mr-2">{task.hash}</span>
                       <Copy className="w-3 h-3 text-gray-400 cursor-pointer hover:text-[#00FFB2]" />
                     </div>
                   </div>
                 </div>
 
-                {task.claimed === true && (
+                {task.status === "Completed" && (
                   <div className="flex justify-end">
-                    <button className="flex items-center bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors">
-                      <Download className="w-4 h-4 mr-2" onClick={() => handleDownloadResults()} />
+                    <button className="flex items-center bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors" onClick={() => handleDownloadResults(task.id)}>
+                      <Download className="w-4 h-4 mr-2" />
                       Download Results
                     </button>
                   </div>
@@ -627,26 +554,39 @@ export const ClientDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {/* job history */}
-                  {showTasks?.map((task) => (
-                    <tr key={task.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-[#0A0E2A]">{task.name}</div>
-                        <div className="text-sm text-gray-500">{task.taskType}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${task.claimed === true ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{task.claimed === true ? "Completed" : "In Progress"}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {Number(task.completedItems)} / {Number(task.totalItems)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#9B5DE5] font-medium">{(Number(task.prize) / 100000000).toFixed(1)} ICP</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTimeAgo(task.createdAt)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button className="text-[#00FFB2] hover:text-[#00FFB2]/80 font-medium">View Details</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {tasks
+                    .concat([
+                      {
+                        id: 4,
+                        name: "DeFi Protocol Analysis",
+                        type: "DeFi Risk",
+                        progress: 100,
+                        status: "Completed",
+                        escrow: "450.0 ICP",
+                        labels: "3,000 / 3,000",
+                        created: "2 weeks ago",
+                        hash: "0xno34...pq56",
+                        labelers: 20,
+                        avgAccuracy: 97.5,
+                      },
+                    ])
+                    .map((task) => (
+                      <tr key={task.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-[#0A0E2A]">{task.name}</div>
+                          <div className="text-sm text-gray-500">{task.type}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${task.status === "Completed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{task.status}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.labels}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#9B5DE5] font-medium">{task.escrow}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.created}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <button className="text-[#00FFB2] hover:text-[#00FFB2]/80 font-medium">View Details</button>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
