@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Upload, Plus, Download, Clock, CheckCircle, X, AlertCircle, Copy, Eye, Filter, Search } from "lucide-react";
-import Papa from "papaparse";
 import { Layout } from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
 import { validata_backend } from "declarations/validata_backend";
@@ -11,6 +10,7 @@ export const ClientDashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState<"overview" | "upload" | "tasks" | "history">("overview");
   const [showTasks, setShowTasks] = useState<BackendTask[] | null>(null);
   const [userBalance, setUserBalance] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState([
     { label: "Active Tasks", value: "0", change: "+0 this week", color: "text-[#00FFB2]" },
     { label: "Total Labels", value: "0", change: "+0 today", color: "text-[#9B5DE5]" },
@@ -124,6 +124,13 @@ export const ClientDashboard: React.FC = () => {
     }
   };
 
+  const filteredTasks = showTasks?.filter((task) => {
+    if (!searchTerm) return true;
+
+    const lowerSearch = searchTerm.toLowerCase();
+    return task.name.toLowerCase().includes(lowerSearch) || task.taskType.toLowerCase().includes(lowerSearch) || task.description.toLowerCase().includes(lowerSearch) || task.id.toString().includes(lowerSearch);
+  });
+
   const handleCreateTask = async (e: React.MouseEvent) => {
     e.preventDefault();
 
@@ -155,7 +162,7 @@ export const ClientDashboard: React.FC = () => {
     const taskData = {
       taskName: formData.taskName,
       taskType: formData.taskType,
-      rewardPerLabel: Math.round(parseFloat(formData.rewardPerLabel) * 1e8) || 0,
+      rewardPerLabel: Math.round(parseFloat(formData.rewardPerLabel) * 100000000),
       qualityThreshold: formData.qualityThreshold,
       labelingInstructions: formData.labelingInstructions,
       description: formData.description,
@@ -240,57 +247,8 @@ export const ClientDashboard: React.FC = () => {
     }
   };
 
-  const handleDownloadResults = async (taskId: number, format: "csv" | "json" = "csv") => {
-    try {
-      const response = await fetch(`/api/tasks/${taskId}/results`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      let blobData, fileType, fileExtension;
-
-      if (format === "json") {
-        blobData = JSON.stringify(data, null, 2);
-        fileType = "application/json";
-        fileExtension = "json";
-      } else {
-        blobData = Papa.unparse(data, {
-          header: true,
-          delimiter: ",",
-          quotes: true,
-          skipEmptyLines: true,
-          newline: "\r\n",
-        });
-        fileType = "text/csv;charset=utf-8;";
-        fileExtension = "csv";
-      }
-
-      const blob = new Blob([blobData], { type: fileType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-
-      a.href = url;
-      a.download = `task-${taskId}-results-${new Date().toISOString().slice(0, 10)}.${fileExtension}`;
-      a.style.display = "none";
-
-      document.body.appendChild(a);
-      a.click();
-
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error("Download failed:", error);
-        alert(`Download failed: ${error.message}`);
-      } else {
-        console.error("Download failed with unknown error:", error);
-      }
-    }
+  const handleDownloadResults = async () => {
+    alert("Download functionality will be implemented soon");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,7 +314,7 @@ export const ClientDashboard: React.FC = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveSection(tab.id as any)}
+                onClick={() => setActiveSection(tab.id as "overview" | "upload" | "tasks" | "history")}
                 className={`flex items-center px-3 md:px-4 py-2 rounded-xl transition-all duration-200 text-sm md:text-base ${activeSection === tab.id ? "bg-white shadow-sm text-[#0A0E2A]" : "text-gray-600 hover:text-[#0A0E2A]"}`}
               >
                 <Icon className="w-4 h-4 mr-2" />
@@ -566,7 +524,13 @@ export const ClientDashboard: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                  <input type="text" placeholder="Search tasks..." className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent text-sm" />
+                  <input
+                    type="text"
+                    placeholder="Search tasks..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent text-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
                 <button className="flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300">
                   <Filter className="w-4 h-4 mr-2" />
@@ -575,7 +539,7 @@ export const ClientDashboard: React.FC = () => {
               </div>
             </div>
 
-            {showTasks?.map((task) => (
+            {filteredTasks?.map((task) => (
               <div key={task.id.toString()} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
                   <div>
@@ -631,8 +595,8 @@ export const ClientDashboard: React.FC = () => {
 
                 {task.claimed === true && (
                   <div className="flex justify-end">
-                    <button className="flex items-center bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors" onClick={() => handleDownloadResults(Number(task.id))}>
-                      <Download className="w-4 h-4 mr-2" />
+                    <button className="flex items-center bg-[#00FFB2] text-[#0A0E2A] px-4 py-2 rounded-xl font-medium hover:bg-[#00FFB2]/90 transition-colors">
+                      <Download className="w-4 h-4 mr-2" onClick={() => handleDownloadResults()} />
                       Download Results
                     </button>
                   </div>

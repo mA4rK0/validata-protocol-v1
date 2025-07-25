@@ -44,6 +44,7 @@ actor class TaskManager() {
         balance : Nat;
         tasksCompleted : Nat;
         role : UserRole;
+        reputation: Nat;
     };
     
     var userProfiles = HashMap.HashMap<Text, UserProfile>(0, Text.equal, Text.hash);
@@ -59,6 +60,7 @@ actor class TaskManager() {
                     balance = 50_000_000_000;
                     tasksCompleted = 0;
                     role = #Client;
+                    reputation = 25;
                 };
                 userProfiles.put(userId, newProfile);
                 newProfile
@@ -101,7 +103,7 @@ actor class TaskManager() {
                 };
 
                 let progressValue : Int = if (task.totalItems > 0) {
-                    let percent = (Nat.div(completedItems * 100, task.totalItems));
+                    let percent = (completedItems * 100) / task.totalItems;
                     percent;
                 } else {
                     0
@@ -122,6 +124,9 @@ actor class TaskManager() {
     public shared({caller}) func makeTask(name: Text, taskType: Text, description: Text, qualityThreshold: Text, totalItems: Nat, rewardPerLabel: Nat, dataset: [Nat8]) : async Result.Result<Text, Text> {
         let companyId = Principal.toText(caller);
         
+        if (totalItems <= 0) {
+            return #err("Total items must be positive");
+        };
         if (name == "") {
             return #err("Task name required");
         };
@@ -184,14 +189,16 @@ actor class TaskManager() {
 
     public shared({caller}) func takeTask(taskId : Text) : async Result.Result<Text, Text> {
         let workerId = Principal.toText(caller);
-        
+    
         switch (tasks.get(taskId)) {
             case null { #err("Task not found") };
             case (?task) {
+                // Periksa apakah worker sudah mengambil task ini
                 if (Array.find(task.workerIds, func (id : Text) : Bool { id == workerId }) != null) {
                     return #err("Task already taken");
                 };
 
+                // Tambahkan worker ke task
                 let updatedWorkerIds = Array.append(task.workerIds, [workerId]);
                 let updatedTask = {
                     task with 
@@ -238,7 +245,7 @@ actor class TaskManager() {
                 };
                 userProfiles.put(workerId, updatedWorker);
                 
-                let newCompletedItems = task.completedItems + claimableItems;
+                let newCompletedItems = claimableItems;
                 let newProgress = if (task.totalItems > 0) {
                     Nat.div(Nat.mul(newCompletedItems, 100), task.totalItems)
                 } else { 0 };
